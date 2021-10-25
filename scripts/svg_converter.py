@@ -237,70 +237,6 @@ def remove_groups(stage_svg):
     stage_svg.write_bytes(ET.tostring(root))
 
 
-def extract_svg_page(orig_pdf, page_no, out_dir, overwrite):
-    # NOTE: stage_svg is passed by reference and
-    # mutated within calling functions.
-    #
-    stage_svg = out_dir / f"page_{page_no}.svg"
-
-    if not overwrite and stage_svg.exists():
-        return
-
-    logger.info("Extracting to SVG page %s", page_no)
-
-    # use inkscape to load in page using popplet/cairo import
-    # TODO: use pdftocairo directly?
-    #
-    run_inkscape(
-        orig_pdf,
-        ["--pdf-poppler", f"--pdf-page={page_no}", f"--export-filename={stage_svg}"],
-    )
-
-    # capture document size and resize to width or height accordingly
-    #
-    resize_doc(stage_svg)
-
-    # flatten all cubic bezier paths into lines
-    #
-    transform_to_line_segments(stage_svg)
-
-    # remove image masks and prepare for bitmap tracing
-    #
-    prepare_images(stage_svg)
-
-    # transform paths with in line matrix transforms
-    # (inkscape ungroup doesn't work well with these)
-    #
-    transform_paths(stage_svg)
-
-    # inkscape tasks
-    # TODO: optimize by rewriting as pure xml transforms
-    # TODO: potentially use svgpathtools new flatten_all_paths() function?
-    # * un group everything (extensions / arrange / deep ungroup)
-    # * select all (path / objects to path)
-    # * file / clean up document
-    # * apply path (extension / modify path / apply transform) - https://stackoverflow.com/questions/13329125/removing-transforms-in-svg-files
-    # * save as plain SVG
-    #
-    run_inkscape(
-        str(stage_svg),
-        ["--with-gui", "--batch-process"],
-        [
-            "mcepl.ungroup_deep.noprefs",
-            "select-all",
-            "object-to-path",
-            "select-clear",
-            "vacuum-defs",
-            "com.klowner.filter.applytransform.noprefs",
-            "FileSave",
-            "file-close",
-        ],
-    )
-
-    # remove remaining unecessary groups
-    #
-    remove_groups(stage_svg)
-
 
 def generate_template_layers(vertical_lines=True, horizontal_lines=True):
     """Creates two layers for note taking with optional grid lines."""
@@ -356,68 +292,6 @@ def generate_rmlines_and_upload(in_dir, exclude_grid_layers=False):
 
     logger.info("Uploading to Remarkable cloud as '%s'", name)
     upload_rm_doc(name, rms)
-
-
-def orig_main():
-    logging.basicConfig(level="INFO")
-
-    parser = ArgumentParser("Convert PDF into simple SVG.")
-    parser.add_argument(
-        "pdf_input", metavar="pdf_path", type=str, help="Path to file for conversion"
-    )
-    parser.add_argument(
-        "--first", dest="first", type=int, default=1, help="Start from this page number"
-    )
-    parser.add_argument(
-        "--last", dest="last", type=int, default=None, help="Finish on this page number"
-    )
-    parser.add_argument(
-        "--overwrite-svg",
-        dest="overwrite_svg",
-        type=bool,
-        default=False,
-        help="Write over intermediate SVG files",
-    )
-    parser.add_argument(
-        "--exclude-grid-layers",
-        dest="exclude_grid_layers",
-        type=bool,
-        default=False,
-        help="Exclude note taking grid layers",
-    )
-    parser.add_argument(
-        "--upload",
-        dest="upload",
-        type=bool,
-        default=True,
-        help="Upload document to Remarkable Cloud",
-    )
-    args = parser.parse_args()
-
-    pdf_input = Path(args.pdf_input)
-    if not pdf_input.exists():
-        raise RuntimeError(f"PDF file '{pdf_input}' does not exist")
-    out_dir = Path(pdf_input).with_suffix("")
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    logger.info("Processing PDF file '%s'", pdf_input)
-
-    if not args.last:
-        info = pdf_info(pdf_input)
-        args.last = int(info["Pages"])
-
-    for pn in range(args.first, args.last + 1):
-        extract_svg_page(
-            orig_pdf=pdf_input,
-            page_no=pn,
-            out_dir=out_dir,
-            overwrite=args.overwrite_svg,
-        )
-
-    if args.upload:
-        generate_rmlines_and_upload(
-            out_dir, exclude_grid_layers=args.exclude_grid_layers
-        )
 
 def main(infiles, outname):
 	rms = []
