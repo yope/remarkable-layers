@@ -70,7 +70,8 @@ def svg_path_to_strokes(
                     pressure=segment_pressure,
                 )
             )
-        strokes.append(stroke)
+        if len(points):
+            strokes.append(stroke)
     return strokes
 
 
