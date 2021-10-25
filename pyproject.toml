@@ -24,6 +24,7 @@ rope = "^0.17.0"
 rmlines_pdf_converter = 'scripts.pdf_converter:main'
 rmlines_pen_gallery = 'scripts.pen_gallery:main'
 rmlines_samples = 'scripts.samples:main'
+rmlines_svg_converter = 'scripts.svg_converter:main'
 
 [build-system]
 requires = ["poetry>=0.12"]
