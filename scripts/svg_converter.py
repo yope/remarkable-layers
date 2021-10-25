@@ -293,7 +293,7 @@ def generate_rmlines_and_upload(in_dir, exclude_grid_layers=False):
     logger.info("Uploading to Remarkable cloud as '%s'", name)
     upload_rm_doc(name, rms)
 
-def main(infiles, outname):
+def main_process(infiles, outname):
 	rms = []
 	i = 0
 	for infile in infiles:
@@ -380,5 +380,8 @@ def crop_paths(p):
 			parent_map[path].remove(path)
 	p.write_bytes(ET.tostring(root))
 
+def main():
+	main_process(sys.argv[1:-1], sys.argv[-1])
+
 if __name__ == "__main__":
-	main(sys.argv[1:-1], sys.argv[-1])
+	main()
